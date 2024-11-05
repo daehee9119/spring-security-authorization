@@ -8,13 +8,20 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 
+import static nextstep.security.utils.URLConstants.DEFAULT_REQUEST_URI;
+import static nextstep.security.utils.URLConstants.MEMBER_ME_REQUEST_URI;
+
 public class BasicAuthenticationFilter extends OncePerRequestFilter {
+
     public static final String AUTHENTICATION_SCHEME_BASIC = "Basic";
 
     private final AuthenticationManager authenticationManager;
@@ -27,6 +34,7 @@ public class BasicAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) {
+
         try {
             Authentication authentication = convert(request);
             if (authentication == null) {

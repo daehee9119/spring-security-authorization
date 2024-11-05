@@ -4,7 +4,9 @@ import nextstep.app.domain.Member;
 import nextstep.app.domain.MemberRepository;
 import nextstep.security.authentication.AuthenticationException;
 import nextstep.security.authentication.BasicAuthenticationFilter;
+import nextstep.security.authentication.AuthorizationFilter;
 import nextstep.security.authentication.UsernamePasswordAuthenticationFilter;
+import nextstep.security.authorization.SecuredAspect;
 import nextstep.security.config.DefaultSecurityFilterChain;
 import nextstep.security.config.DelegatingFilterProxy;
 import nextstep.security.config.FilterChainProxy;
@@ -14,9 +16,12 @@ import nextstep.security.userdetails.UserDetails;
 import nextstep.security.userdetails.UserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
 import java.util.List;
+import java.util.Set;
 
+@EnableAspectJAutoProxy
 @Configuration
 public class SecurityConfig {
 
@@ -37,12 +42,18 @@ public class SecurityConfig {
     }
 
     @Bean
+    public SecuredAspect securedAspect() {
+        return new SecuredAspect();
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain() {
         return new DefaultSecurityFilterChain(
                 List.of(
                         new SecurityContextHolderFilter(),
                         new UsernamePasswordAuthenticationFilter(userDetailsService()),
-                        new BasicAuthenticationFilter(userDetailsService())
+                        new BasicAuthenticationFilter(userDetailsService()),
+                        new AuthorizationFilter()
                 )
         );
     }
@@ -62,6 +73,11 @@ public class SecurityConfig {
                 @Override
                 public String getPassword() {
                     return member.getPassword();
+                }
+
+                @Override
+                public Set<String> getRoles() {
+                    return member.getRoles();
                 }
             };
         };
