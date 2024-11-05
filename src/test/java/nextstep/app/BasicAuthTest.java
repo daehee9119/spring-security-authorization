@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import java.util.Base64;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -80,5 +81,33 @@ class BasicAuthTest {
         );
 
         response.andExpect(status().isUnauthorized());
+    }
+
+
+    @DisplayName("Members/me: 인증되지 않은 사용자 접근 불가")
+    @Test
+    void request_membersme_fail_unauthorized() throws Exception {
+        String token = Base64.getEncoder().encodeToString((TEST_ADMIN_MEMBER.getEmail() + ":" + "invalid").getBytes());
+
+        ResultActions response = mockMvc.perform(get("/members/me")
+                .header("Authorization", "Basic " + token)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+        );
+
+        response.andExpect(status().isUnauthorized());
+    }
+
+    @DisplayName("Members/me: 인증된 사용자 접근 가능")
+    @Test
+    void request_membersme_success() throws Exception {
+        String token =
+                Base64.getEncoder().encodeToString((TEST_USER_MEMBER.getEmail() + ":" + TEST_USER_MEMBER.getPassword()).getBytes());
+
+        ResultActions response = mockMvc.perform(get("/members/me")
+                .header("Authorization", "Basic " + token)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+        );
+
+        response.andExpect(status().isOk());
     }
 }

@@ -12,9 +12,17 @@ repositories {
     mavenCentral()
 }
 
+ext {
+    lombokVersion = '1.18.30'
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+    compileOnly group: 'org.projectlombok', name: 'lombok', version : lombokVersion
+    annotationProcessor group: 'org.projectlombok', name: 'lombok', version : lombokVersion
+    testAnnotationProcessor group: 'org.projectlombok', name: 'lombok', version : lombokVersion
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

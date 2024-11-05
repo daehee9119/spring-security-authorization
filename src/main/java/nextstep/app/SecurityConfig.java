@@ -1,11 +1,19 @@
 package nextstep.app;
 
+import nextstep.app.configuration.AnyRequestMatcher;
+import nextstep.app.configuration.MvcRequestMatcher;
+import nextstep.app.configuration.RequestMatcherEntry;
 import nextstep.app.domain.Member;
 import nextstep.app.domain.MemberRepository;
 import nextstep.security.authentication.AuthenticationException;
 import nextstep.security.authentication.BasicAuthenticationFilter;
 import nextstep.security.authentication.AuthorizationFilter;
 import nextstep.security.authentication.UsernamePasswordAuthenticationFilter;
+import nextstep.security.authorization.AuthorityAuthorizationManager;
+import nextstep.security.authorization.AuthorizationManager;
+import nextstep.security.authorization.PermitAllAuthorizationManager;
+import nextstep.security.authorization.RequestAuthorizationManager;
+import nextstep.security.authorization.RoleHierarchy;
 import nextstep.security.authorization.SecuredAspect;
 import nextstep.security.config.DefaultSecurityFilterChain;
 import nextstep.security.config.DelegatingFilterProxy;
@@ -14,9 +22,11 @@ import nextstep.security.config.SecurityFilterChain;
 import nextstep.security.context.SecurityContextHolderFilter;
 import nextstep.security.userdetails.UserDetails;
 import nextstep.security.userdetails.UserDetailsService;
+import nextstep.security.utils.URLConstants;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.http.HttpMethod;
 
 import java.util.List;
 import java.util.Set;
@@ -53,9 +63,28 @@ public class SecurityConfig {
                         new SecurityContextHolderFilter(),
                         new UsernamePasswordAuthenticationFilter(userDetailsService()),
                         new BasicAuthenticationFilter(userDetailsService()),
-                        new AuthorizationFilter()
+                        new AuthorizationFilter(requestAuthorizationManager())
                 )
         );
+    }
+
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        return new RoleHierarchy("ADMIN > USER");
+    }
+
+    @Bean
+    public RequestAuthorizationManager requestAuthorizationManager() {
+        List<RequestMatcherEntry<AuthorizationManager>> mappings = List.of(
+                new RequestMatcherEntry<>(new MvcRequestMatcher(HttpMethod.GET, URLConstants.MEMBERS_REQUEST_URI),
+                        new AuthorityAuthorizationManager(roleHierarchy(), "ADMIN")),
+                new RequestMatcherEntry<>(new MvcRequestMatcher(HttpMethod.GET, URLConstants.MEMBER_ME_REQUEST_URI),
+                        new AuthorityAuthorizationManager(roleHierarchy(), "USER")),
+                new RequestMatcherEntry<>(new MvcRequestMatcher(HttpMethod.GET, URLConstants.SEARCH_URI),
+                        new PermitAllAuthorizationManager()),
+                new RequestMatcherEntry<>(AnyRequestMatcher.INSTANCE, new PermitAllAuthorizationManager())
+        );
+        return new RequestAuthorizationManager(mappings);
     }
 
     @Bean

@@ -10,31 +10,41 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import lombok.RequiredArgsConstructor;
+import nextstep.security.authorization.AuthorizationDecision;
+import nextstep.security.authorization.AuthorizationManager;
+import nextstep.security.authorization.ForbiddenException;
+import nextstep.security.authorization.RequestAuthorizationManager;
+import nextstep.security.authorization.RoleHierarchy;
 import nextstep.security.context.SecurityContextHolder;
 import org.springframework.web.filter.GenericFilterBean;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 import static nextstep.security.utils.URLConstants.MEMBERS_REQUEST_URI;
 
-public class AuthorizationFilter extends GenericFilterBean {
+@RequiredArgsConstructor
+public class AuthorizationFilter extends OncePerRequestFilter {
+
+    private final AuthorizationManager<HttpServletRequest> authorizationManager;
 
     @Override
-    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
-            throws IOException, ServletException {
-        Authentication registeredAuthentication = SecurityContextHolder.getContext().getAuthentication();
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
-        if (Objects.isNull(registeredAuthentication)) {
-            ((HttpServletResponse) servletResponse).setStatus(HttpServletResponse.SC_FORBIDDEN);
+        try{
+            Authentication registeredAuthentication = SecurityContextHolder.getContext().getAuthentication();
+            AuthorizationDecision authorizationDecision = authorizationManager.check(registeredAuthentication, request);
+
+            if (Objects.isNull(authorizationDecision) || !authorizationDecision.isGranted()) {
+                throw new ForbiddenException();
+            }
+        } catch (ForbiddenException forbiddenException) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        } catch (AuthenticationException authenticationException) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
-
-        HttpServletRequest request = (HttpServletRequest) servletRequest;
-
-        if (request.getRequestURI().equals(MEMBERS_REQUEST_URI) && !registeredAuthentication.getRoles().contains(
-                "ADMIN")) {
-            ((HttpServletResponse) servletResponse).setStatus(HttpServletResponse.SC_FORBIDDEN);
-            return;
-        }
-
-        filterChain.doFilter(servletRequest, servletResponse);
+        filterChain.doFilter(request, response);
     }
 }
